@@ -1,0 +1,8 @@
+---md,output-only
+
+# Leko
+
+---exec,coding=utf8,stx=python
+#!/usr/bin/env python
+
+print('Hello World')
