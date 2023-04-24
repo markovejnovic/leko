@@ -34,7 +34,6 @@ def _split_cells(content: str) -> List[_CellSplit]:
     if current_cell.index != -1:
         outs.append(current_cell)
 
-    print(outs)
     return outs
 
 

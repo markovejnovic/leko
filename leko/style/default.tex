@@ -1,0 +1,8 @@
+\usepackage{etoolbox}
+
+\makeatletter
+\patchcmd{\@verbatim}
+    {\verbatim@font}
+    {\verbatim@font\small}
+    {}{}
+\makeatother

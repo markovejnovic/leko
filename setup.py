@@ -16,6 +16,7 @@ setup(
     long_description_content_type="text/markdown",
     author="author_name",
     packages=find_packages(exclude=["tests", ".github"]),
+    package_data={'leko': ['style/**/*']},
     install_requires=[
         'pandoc>=2.3',
         'plumbum>=1.8',
