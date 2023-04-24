@@ -9,7 +9,7 @@ def __read(path: str) -> str:
 
 setup(
     name="leko",
-    version='0.1.0',
+    version='0.1.1',
     description="Leko is the programmer's notebook.",
     url="https://github.com/markovejnovic/leko/",
     long_description=__read("README.md"),
