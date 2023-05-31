@@ -8,11 +8,10 @@ from pandoc.types import Pandoc
 
 from leko.cells import parser as cell_parser
 from leko.cells.rendering import merge_renders
-import argparse
+from leko import cli, timing
 import pkg_resources
 import multiprocessing as mp
-import time
-
+import itertools
 from leko.cells.type import Cell
 
 CELL_HANDLERS = [
@@ -25,33 +24,17 @@ STYLES: Dict[str, str] = {
     'latex': pkg_resources.resource_filename('leko', 'style/default.tex')
 }
 
-def mp_render(id_c: Tuple[int, Cell]) -> Pandoc:
+def mp_render(id_c: Tuple[int, Cell], verbose: bool = False) -> Pandoc:
     id, c = id_c
-    beg = time.time()
-    render = next(h for h in CELL_HANDLERS
-                if c.header.type in h.get_tags())().render_cell(c)
-    t = time.time() - beg
-    print(f'Processing cell: {id} took {t} seconds', file=sys.stderr)
+    with timing.Timer(verbose,
+                      f'Processing cell: {id} took {{time:.3f}} seconds.'):
+        render = next(h for h in CELL_HANDLERS
+                      if c.header.type in h.get_tags())().render_cell(c)
     return render
 
 def main():
     """Entry point."""
-    parser = argparse.ArgumentParser(
-        description='A notebook command-line application',
-    )
-    parser.add_argument(
-        'input_file',
-        metavar='IN',
-        help='The input .leko file source. If \'-\' is specified, reads from' +
-             'stdin until EOF.')
-    parser.add_argument('-o', '--output', help='The output file.',
-                        required=True)
-    parser.add_argument(
-        '-f', '--format',
-        help='The output file format. Currently supported: \'pdf\'',
-        required=True
-    )
-    args = parser.parse_args()
+    args = cli.args()
 
     # Read input file
     if args.input_file == '-':
@@ -60,19 +43,21 @@ def main():
         with open(path.realpath(args.input_file), 'r') as f:
             file_content = f.read()
 
-    render_pool = mp.Pool(mp.cpu_count())
-    cell_renders = render_pool.map(
-        mp_render,
-        enumerate(cell_parser.parse(file_content)))
+    with mp.Pool(args.jobs) as render_pool:
+        cell_renders = render_pool.starmap(
+            mp_render,
+            zip(enumerate(cell_parser.parse(file_content)),
+                itertools.repeat(args.verbose))
+        )
 
-    pandoc.write(merge_renders(cell_renders), file=args.output,
-                 format=args.format, options=[
-                     '-V', 'linkcolor:blue',
-                     '-V', 'geometry:a4paper',
-                     '-V', 'geometry:margin=1in',
-                     '-H', STYLES[args.format]
-                     ]
-    )
+    with timing.Timer(args.verbose, 'Linking cells took {time:.3f} seconds.'):
+        pandoc.write(merge_renders(cell_renders), file=args.output,
+                     format=args.format, options=[
+                         '-V', 'linkcolor:blue',
+                         '-V', 'geometry:a4paper',
+                         '-V', 'geometry:margin=1in',
+                         '-H', STYLES[args.format]
+                         ])
 
 
 if __name__ == '__main__':
